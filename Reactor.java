@@ -1,25 +1,50 @@
 import java.util.LinkedList;
-import java.util.List;
 
 class Reactor {
     interface Task {
         int run(Object... args);
     }
 
-    private LinkedList<Task> todo;
+    private class ReactorPair {
+        public Task task;
+        public Channel chan;
+
+        ReactorPair(Task t, Channel c) {
+            this.task = t;
+            this.chan = c;
+        }
+    }
+
+    private LinkedList<ReactorPair> todo;
 
     public Reactor() {
-        todo = new LinkedList<Task>();
+        todo = new LinkedList<ReactorPair>();
     }
 
     public void appendTask(Task task) {
-        todo.addFirst(task);
+        todo.addFirst(new ReactorPair(task, null));
+    }
+
+    public void appendTask(Task task, Channel chan) {
+        todo.addFirst(new ReactorPair(task, chan));
     }
 
     public int runNext() {
-        Task next = todo.removeLast();
+        ReactorPair next = todo.removeLast();
 
-        return next.run(0);
+        int res = next.task.run(0);
+
+        if (next.chan != null) {
+            next.chan.write(new Integer(res).toString());
+        }
+
+        return 0;
+    }
+
+    public void run() {
+        while (todo.size() != 0) {
+            this.runNext();
+        }
     }
 
     public static void main(String... args) {
@@ -31,6 +56,6 @@ class Reactor {
         };
 
         r.appendTask(t);
-        r.runNext();
+        r.run();
     }
 }
